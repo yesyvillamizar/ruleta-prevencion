@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rueda de la Prevención (Canvas)</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f4f8;
+    }
+    canvas {
+      border: 8px solid #333;
+      border-radius: 50%;
+      margin-bottom: 1rem;
+    }
+    #spin {
+      padding: 1rem 2rem;
+      font-size: 1.2rem;
+      background-color: #10b981;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    #result, #options {
+      margin-top: 1.5rem;
+      font-size: 1.1rem;
+      font-weight: bold;
+      text-align: center;
+    }
+    .option-btn {
+      display: block;
+      margin: 0.5rem auto;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <h1>Rueda de la Prevención</h1>
+  <canvas id="wheel" width="400" height="400"></canvas>
+  <button id="spin">Girar</button>
+  <div id="result"></div>
+  <div id="options"></div>
+
+  <audio id="win-sound" src="https://www.soundjay.com/human/sounds/applause-8.mp3"></audio>
+  <audio id="error-sound" src="https://www.soundjay.com/button/sounds/beep-07.mp3"></audio>
+
+  <script>
+    const preguntas = [
+      { pregunta: "¿Desde qué edad hay responsabilidad penal en Colombia?", opciones: ["A. Desde los 12 años", "B. Desde los 14 años", "C. Desde los 16 años", "D. Desde los 18 años"], correcta: "B. Desde los 14 años" },
+      { pregunta: "¿Qué es el grooming?", opciones: ["A. Un juego en línea", "B. El contacto físico entre jóvenes", "C. Un adulto que engaña a un menor por internet con fines sexuales", "D. Una tendencia en redes sociales"], correcta: "C. Un adulto que engaña a un menor por internet con fines sexuales" },
+      { pregunta: "¿Cuál es un ejemplo de maltrato infantil?", opciones: ["A. Corregir con amor", "B. Ignorar las emociones del niño", "C. Negar comida como castigo", "D. Poner límites saludables"], correcta: "C. Negar comida como castigo" },
+      { pregunta: "¿Qué sustancia puede ser mortal en pequeñas cantidades?", opciones: ["A. Alcohol", "B. Marihuana", "C. Fentanilo", "D. Tabaco"], correcta: "C. Fentanilo" },
+      { pregunta: "¿Qué hacer si te piden fotos íntimas?", opciones: ["A. Enviarlas si confías en la persona", "B. Ignorar el mensaje", "C. Guardarlas para después", "D. No enviarlas y denunciarlo"], correcta: "D. No enviarlas y denunciarlo" },
+      { pregunta: "¿Quién atiende casos de abuso infantil en Colombia?", opciones: ["A. La DIAN", "B. El ICBF", "C. El SENA", "D. El INPEC"], correcta: "B. El ICBF" },
+      { pregunta: "¿Cuál es una señal de trata de personas?", opciones: ["A. Te ofrecen mucho dinero por un trabajo confuso", "B. Te piden tus documentos personales", "C. No te explican bien a dónde vas", "D. Todas las anteriores"], correcta: "D. Todas las anteriores" },
+      { pregunta: "¿Qué hacer si un amigo consume drogas?", opciones: ["A. Callar por lealtad", "B. Probar para entenderlo", "C. Buscar ayuda de un adulto o profesional", "D. Alejarte sin decir nada"], correcta: "C. Buscar ayuda de un adulto o profesional" },
+      { pregunta: "¿Qué delito es compartir videos íntimos de menores?", opciones: ["A. Acoso escolar", "B. Pornografía infantil", "C. Ciberbullying", "D. Sexting normal"], correcta: "B. Pornografía infantil" },
+      { pregunta: "¿Cómo ayudar a alguien víctima de bullying?", opciones: ["A. Grabar el acoso", "B. Reírse para no quedar mal", "C. Defenderlo o avisar a un adulto", "D. Compartirlo en redes para que se sepa"], correcta: "C. Defenderlo o avisar a un adulto" }
+    ];
+
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const result = document.getElementById("result");
+    const optionsDiv = document.getElementById("options");
+    const winSound = document.getElementById("win-sound");
+    const errorSound = document.getElementById("error-sound");
+    const spinBtn = document.getElementById("spin");
+
+    let angle = 0;
+    let spinning = false;
+
+    function drawWheel() {
+      const num = preguntas.length;
+      const anglePerSlice = 2 * Math.PI / num;
+
+      for (let i = 0; i < num; i++) {
+        ctx.beginPath();
+        ctx.moveTo(200, 200);
+        ctx.fillStyle = `hsl(${i * 360 / num}, 70%, 60%)`;
+        ctx.arc(200, 200, 200, i * anglePerSlice, (i + 1) * anglePerSlice);
+        ctx.lineTo(200, 200);
+        ctx.fill();
+      }
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+      spinning = true;
+      let rotation = Math.random() * 360 + 720;
+      angle += rotation;
+      canvas.style.transition = "transform 3s ease-out";
+      canvas.style.transform = `rotate(${angle}deg)`;
+
+      setTimeout(() => {
+        const normalized = angle % 360;
+        const slice = Math.floor(preguntas.length - (normalized / 360) * preguntas.length) % preguntas.length;
+        mostrarPregunta(preguntas[slice]);
+        spinning = false;
+      }, 3100);
+    }
+
+    function mostrarPregunta(pregunta) {
+      result.innerText = `Pregunta: ${pregunta.pregunta}`;
+      optionsDiv.innerHTML = "";
+      pregunta.opciones.forEach(op => {
+        const btn = document.createElement("button");
+        btn.className = "option-btn";
+        btn.textContent = op;
+        btn.onclick = () => {
+          if (op === pregunta.correcta) {
+            winSound.play();
+            alert("¡Correcto! Bien hecho.");
+          } else {
+            errorSound.play();
+            alert("Respuesta incorrecta. Intenta otra vez.");
+          }
+        };
+        optionsDiv.appendChild(btn);
+      });
+    }
+
+    drawWheel();
+    spinBtn.onclick = spinWheel;
+  </script>
+</body>
+</html>
