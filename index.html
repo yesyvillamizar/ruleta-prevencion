@@ -1,25 +1,32 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Rueda de la Prevención (Canvas)</title>
+  <meta charset="UTF-8" />
+  <title>Rueda de la Prevención</title>
   <style>
     body {
+      background-color: #004d66;
       font-family: sans-serif;
+      margin: 0;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      height: 100vh;
-      background-color: #f0f4f8;
+      min-height: 100vh;
+      color: white;
     }
     canvas {
-      border: 8px solid #333;
       border-radius: 50%;
-      margin-bottom: 1rem;
+    }
+    #pointer {
+      position: absolute;
+      top: 110px;
+      left: calc(50% - 20px);
+      z-index: 10;
     }
     #spin {
+      margin-top: 2rem;
       padding: 1rem 2rem;
       font-size: 1.2rem;
       background-color: #10b981;
@@ -28,10 +35,8 @@
       border-radius: 10px;
       cursor: pointer;
     }
-    #result, #options {
-      margin-top: 1.5rem;
-      font-size: 1.1rem;
-      font-weight: bold;
+    #result {
+      margin-top: 2rem;
       text-align: center;
     }
     .option-btn {
@@ -39,100 +44,151 @@
       margin: 0.5rem auto;
       padding: 0.5rem 1rem;
       font-size: 1rem;
-      cursor: pointer;
-      border: none;
       border-radius: 5px;
-      background-color: #e5e7eb;
+      border: none;
+      background-color: #f0f0f0;
+      color: #333;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
   <h1>Rueda de la Prevención</h1>
+  <div id="pointer">
+    <svg width="40" height="40">
+      <polygon points="0,0 40,0 20,40" style="fill:purple;" />
+    </svg>
+  </div>
   <canvas id="wheel" width="400" height="400"></canvas>
   <button id="spin">Girar</button>
   <div id="result"></div>
-  <div id="options"></div>
-
-  <audio id="win-sound" src="https://www.soundjay.com/human/sounds/applause-8.mp3"></audio>
-  <audio id="error-sound" src="https://www.soundjay.com/button/sounds/beep-07.mp3"></audio>
-
+  <audio id="correct" src="https://www.soundjay.com/buttons/sounds/button-4.mp3"></audio>
+  <audio id="wrong" src="https://www.soundjay.com/buttons/sounds/button-10.mp3"></audio>
   <script>
-    const preguntas = [
-      { pregunta: "¿Desde qué edad hay responsabilidad penal en Colombia?", opciones: ["A. Desde los 12 años", "B. Desde los 14 años", "C. Desde los 16 años", "D. Desde los 18 años"], correcta: "B. Desde los 14 años" },
-      { pregunta: "¿Qué es el grooming?", opciones: ["A. Un juego en línea", "B. El contacto físico entre jóvenes", "C. Un adulto que engaña a un menor por internet con fines sexuales", "D. Una tendencia en redes sociales"], correcta: "C. Un adulto que engaña a un menor por internet con fines sexuales" },
-      { pregunta: "¿Cuál es un ejemplo de maltrato infantil?", opciones: ["A. Corregir con amor", "B. Ignorar las emociones del niño", "C. Negar comida como castigo", "D. Poner límites saludables"], correcta: "C. Negar comida como castigo" },
-      { pregunta: "¿Qué sustancia puede ser mortal en pequeñas cantidades?", opciones: ["A. Alcohol", "B. Marihuana", "C. Fentanilo", "D. Tabaco"], correcta: "C. Fentanilo" },
-      { pregunta: "¿Qué hacer si te piden fotos íntimas?", opciones: ["A. Enviarlas si confías en la persona", "B. Ignorar el mensaje", "C. Guardarlas para después", "D. No enviarlas y denunciarlo"], correcta: "D. No enviarlas y denunciarlo" },
-      { pregunta: "¿Quién atiende casos de abuso infantil en Colombia?", opciones: ["A. La DIAN", "B. El ICBF", "C. El SENA", "D. El INPEC"], correcta: "B. El ICBF" },
-      { pregunta: "¿Cuál es una señal de trata de personas?", opciones: ["A. Te ofrecen mucho dinero por un trabajo confuso", "B. Te piden tus documentos personales", "C. No te explican bien a dónde vas", "D. Todas las anteriores"], correcta: "D. Todas las anteriores" },
-      { pregunta: "¿Qué hacer si un amigo consume drogas?", opciones: ["A. Callar por lealtad", "B. Probar para entenderlo", "C. Buscar ayuda de un adulto o profesional", "D. Alejarte sin decir nada"], correcta: "C. Buscar ayuda de un adulto o profesional" },
-      { pregunta: "¿Qué delito es compartir videos íntimos de menores?", opciones: ["A. Acoso escolar", "B. Pornografía infantil", "C. Ciberbullying", "D. Sexting normal"], correcta: "B. Pornografía infantil" },
-      { pregunta: "¿Cómo ayudar a alguien víctima de bullying?", opciones: ["A. Grabar el acoso", "B. Reírse para no quedar mal", "C. Defenderlo o avisar a un adulto", "D. Compartirlo en redes para que se sepa"], correcta: "C. Defenderlo o avisar a un adulto" }
+    const temas = [
+      { tema: "Cibernético", color: "#f2542d" },
+      { tema: "Sexual", color: "#e63946" },
+      { tema: "Drogas", color: "#f77f00" },
+      { tema: "Maltrato", color: "#fcbf49" },
+      { tema: "Convivencia", color: "#2a9d8f" },
+      { tema: "Penal", color: "#90e0ef" },
+      { tema: "Grooming", color: "#9d4edd" },
+      { tema: "Responsabilidad", color: "#0077b6" }
     ];
 
-    const canvas = document.getElementById("wheel");
-    const ctx = canvas.getContext("2d");
-    const result = document.getElementById("result");
-    const optionsDiv = document.getElementById("options");
-    const winSound = document.getElementById("win-sound");
-    const errorSound = document.getElementById("error-sound");
-    const spinBtn = document.getElementById("spin");
+    const preguntas = [
+  { "tema": "Cibernético", "pregunta": "Juan (16 años) y Pedro (17 años) comparten en sus redes sociales fotos íntimas de su exnovia de 15 años sin su consentimiento. Esta conducta:", "opciones": ["a) No constituye delito porque ellos también son menores de edad", "b) Es una simple contravención que se sanciona con servicio comunitario", "c) Puede ser calificada como delito contra la integridad, libertad y formación sexual, con consecuencias penales graves para ambos", "d) Solo tiene consecuencias si la víctima decide denunciar en las próximas 24 horas"], "correcta": "c) Puede ser calificada como delito contra la integridad, libertad y formación sexual, con consecuencias penales graves para ambos" },
+  { "tema": "Cibernético", "pregunta": "¿Qué podría ocurrir si decides compartir fotos privadas tuyas o de tus amigos en redes sociales sin su consentimiento?", "opciones": ["A. No pasa nada, solo es una broma.", "B. Puede causar daño emocional y legalmente ser considerado una violación a la privacidad.", "C. Tus amigos lo agradecerán y se volverá viral.", "D. La red social te dará un premio por compartir contenido."], "correcta": "B. Puede causar daño emocional y legalmente ser considerado una violación a la privacidad." },
+  { "tema": "Cibernético", "pregunta": "¿Qué infracción comete un menor si accede a contenido pornográfico en internet desde un café internet?", "opciones": ["A. Ninguna, es su derecho como usuario de internet.", "B. El establecimiento podría ser sancionado por permitir el acceso a menores.", "C. El menor es arrestado por la policía.", "D. Se le prohíbe usar internet durante seis meses."], "correcta": "B. El establecimiento podría ser sancionado por permitir el acceso a menores." },
+  { "tema": "Cibernético", "pregunta": "Si ves a un compañero publicando mensajes suicidas en redes sociales, ¿qué deberías hacer?", "opciones": ["A. Ignorarlo, seguro solo quiere llamar la atención.", "B. Hablar con él y avisar a un adulto o profesional de confianza.", "C. Comentarle que todo estará bien y seguir con tu vida.", "D. Reírte y compartir su publicación con otros."], "correcta": "B. Hablar con él y avisar a un adulto o profesional de confianza." },
+  { "tema": "Cibernético", "pregunta": "Si un adolescente es víctima de abuso en redes sociales (grooming, sextorsión), debe:", "opciones": ["a) Resolver el problema por sí mismo para evitar vergüenza", "b) Esperar que la plataforma digital actúe por iniciativa propia", "c) Informar inmediatamente a sus padres y autoridades, pues constituye un delito grave contra menores", "d) Negociar directamente con el abusador para eliminar el contenido"], "correcta": "c) Informar inmediatamente a sus padres y autoridades, pues constituye un delito grave contra menores" },
+  { "tema": "Maltrato", "pregunta": "¿Qué deberías hacer si presencias un caso de acoso escolar en tu colegio?", "opciones": ["A. Ignorarlo para evitar problemas.", "B. Unirte al agresor para no ser la próxima víctima.", "C. Informar a un adulto de confianza o a las autoridades escolares.", "D. Grabarlo y subirlo a redes sociales."], "correcta": "C. Informar a un adulto de confianza o a las autoridades escolares." },
+  { "tema": "Penal", "pregunta": "Durante el proceso penal contra un adolescente, las audiencias son:", "opciones": ["a) Totalmente públicas para garantizar la transparencia", "b) Abiertas a medios de comunicación para crear conciencia social", "c) Cerradas al público para proteger su identidad e integridad psicológica", "d) Transmitidas en vivo por internet como método disuasorio"], "correcta": "c) Cerradas al público para proteger su identidad e integridad psicológica" },
+  { "tema": "Cibernético", "pregunta": "Si compartes en un grupo de WhatsApp material sexual de una compañera de colegio:", "opciones": ["a) No hay problema legal si el grupo es privado y de confianza", "b) Podrías enfrentar un proceso por delitos contra la libertad, integridad y formación sexual, y pornografía con menores", "c) Solo hay consecuencias si la imagen se viralizó más allá del grupo original", "d) Es una simple falta disciplinaria que solo afecta tu expediente escolar"], "correcta": "b) Podrías enfrentar un proceso por delitos contra la libertad, integridad y formación sexual, y pornografía con menores" },
+  { "tema": "Sexual", "pregunta": "Un adolescente que ha sido víctima de abuso sexual:", "opciones": ["a) Está obligado a confrontar a su agresor directamente en el juicio", "b) Debe esperar a ser mayor de edad para denunciar si quiere ser tomado en serio", "c) Tiene derecho a procedimientos especiales que protejan su dignidad, intimidad y eviten su revictimización", "d) Solo puede denunciar a través de sus padres, nunca directamente"], "correcta": "c) Tiene derecho a procedimientos especiales que protejan su dignidad, intimidad y eviten su revictimización" },
+  { "tema": "Sexual", "pregunta": "¿Es delito pedir fotos íntimas a menores?", "opciones": ["A. No", "B. Solo si se comparten", "C. Sí", "D. Solo si las imprime"], "correcta": "C. Sí" },
+  { "tema": "Sexual", "pregunta": "¿Qué es un delito sexual?", "opciones": ["A. Besar sin permiso", "B. Tocar", "obligar o exponer a contenido sexual", "C. Enviar mensajes", "D. Ser cariñoso"], "correcta": "B. Tocar, obligar o exponer a contenido sexual" },
+  { "tema": "Drogas", "pregunta": "Si te encuentras en una fiesta donde amigos consumen y distribuyen drogas, y la policía realiza un operativo:", "opciones": ["a) No puedes ser investigado si solo estabas presente sin consumir", "b) Podrías enfrentar un proceso por complicidad según el grado de participación, incluso si no consumiste", "c) El sistema de responsabilidad penal para adolescentes no contempla delitos relacionados con drogas", "d) Solo tendrás problemas si eres mayor de 16 años"], "correcta": "b) Podrías enfrentar un proceso por complicidad según el grado de participación, incluso si no consumiste" },
+  { "tema": "Responsabilidad", "pregunta": "¿Cuál es la sanción para un menor que sea sorprendido consumiendo alcohol en un lugar público?", "opciones": ["A. No recibe ninguna sanción por ser menor de edad.", "B. Puede ser amonestado y remitido a un programa de prevención.", "C. Debe pagar una multa equivalente a un salario mínimo.", "D. Recibe una advertencia verbal y no pasa nada más."], "correcta": "B. Puede ser amonestado y remitido a un programa de prevención." },
+  { "tema": "Drogas", "pregunta": "Si un amigo te ofrece una sustancia desconocida en una fiesta, ¿qué deberías hacer?", "opciones": ["A. Probarla solo una vez para ver cómo te sientes.", "B. Decir que no y alejarte de la situación.", "C. Tomarla si todos lo están haciendo.", "D. Guardar un poco para probar después."], "correcta": "B. Decir que no y alejarte de la situación." },
+  { "tema": "Drogas", "pregunta": "Si un menor de edad es captado por grupos criminales para vender drogas:", "opciones": ["a) Es plenamente responsable de sus actos independientemente de cómo fue reclutado", "b) Es considerado víctima de utilización para actividades ilícitas, además de su responsabilidad personal", "c) Queda automáticamente excluido de responsabilidad por ser utilizado", "d) Su responsabilidad depende exclusivamente de cuánto dinero ganó con la actividad"], "correcta": "b) Es considerado víctima de utilización para actividades ilícitas, además de su responsabilidad personal" },
+  { "tema": "Drogas", "pregunta": "¿Qué consecuencias puede traer el consumo frecuente de drogas?", "opciones": ["A. Felicidad permanente", "B. Problemas de salud", "estudio y ley", "C. Más amigos", "D. Premios escolares"], "correcta": "B. Problemas de salud, estudio y ley" },
+  { "tema": "Drogas", "pregunta": "Un adolescente que consume alcohol o sustancias psicoactivas:", "opciones": ["a) No viola ninguna ley mientras no conduzca vehículos", "b) Está en situación de vulneración de derechos y el Estado debe protegerlo, no penalizarlo", "c) Debe ser inmediatamente recluido en un centro de rehabilitación obligatorio", "d) Solo comete una infracción si lo hace en espacios públicos"], "correcta": "b) Está en situación de vulneración de derechos y el Estado debe protegerlo, no penalizarlo" },
+  { "tema": "Drogas", "pregunta": "¿Qué hacer si un compañero te ofrece una sustancia?", "opciones": ["A. Probar", "B. Rechazar y pedir ayuda", "C. Guardar para después", "D. Compartir"], "correcta": "B. Rechazar y pedir ayuda" },
+  { "tema": "Penal", "pregunta": "Si un adolescente de 16 años es encontrado culpable de robo con violencia:", "opciones": ["a) Sus antecedentes quedarán en su registro judicial permanente cuando sea adulto", "b) Sus registros son reservados y no constituyen antecedentes penales en su vida adulta", "c) Solo quedará registro por 1 año y luego se borra automáticamente", "d) El juez puede decidir discrecionalmente si quedan o no antecedentes"], "correcta": "b) Sus registros son reservados y no constituyen antecedentes penales en su vida adulta" },
+  { "tema": "Maltrato", "pregunta": "Si un adolescente es víctima de bullying escolar grave y sistemático:", "opciones": ["a) Debe resolverlo personalmente como parte de su crecimiento", "b) Solo constituye un problema disciplinario interno del colegio", "c) Puede constituir delitos como lesiones personales, injuria, calumnia o discriminación", "d) Es un asunto exclusivamente familiar que no compete a las autoridades"], "correcta": "c) Puede constituir delitos como lesiones personales, injuria, calumnia o discriminación" },
+  { "tema": "Maltrato", "pregunta": "¿Qué hacer si un amigo sufre violencia en casa?", "opciones": ["A. Callar", "B. Decirle que aguante", "C. Contar a un adulto o denunciar", "D. Huir con él"], "correcta": "C. Contar a un adulto o denunciar" },
+  { "tema": "Maltrato", "pregunta": "¿Qué consecuencias tiene el maltrato reiterado?", "opciones": ["A. Ninguna", "B. Daño emocional y legal", "C. Mejora el comportamiento", "D. Lo vuelve fuerte"], "correcta": "B. Daño emocional y legal" },
+  { "tema": "Maltrato", "pregunta": "¿Qué es el maltrato infantil?", "opciones": ["A. Castigo físico leve", "B. Agresión", "abandono o insultos", "C. Regañar con fuerza", "D. Poner límites"], "correcta": "B. Agresión, abandono o insultos" },
+  { "tema": "Responsabilidad", "pregunta": "Si un menor es sorprendido grafiteando una pared pública sin autorización, ¿qué medida correctiva puede recibir?", "opciones": ["A. Debe pagar una multa y limpiar el grafiti.", "B. No pasa nada, el grafiti es una forma de expresión artística.", "C. Solo se notifica a los padres sin ninguna otra sanción.", "D. Recibe un castigo en el colegio."], "correcta": "A. Debe pagar una multa y limpiar el grafiti." },
+  { "tema": "Responsabilidad", "pregunta": "Si un menor insulta o agrede verbalmente a un policía en servicio, ¿qué infracción está cometiendo?", "opciones": ["A. Irrespeto a la autoridad, lo que puede conllevar sanciones.", "B. Ninguna, tiene derecho a expresarse libremente.", "C. Solo recibe una advertencia verbal.", "D. Se le sanciona con la suspensión de su documento de identidad."], "correcta": "A. Irrespeto a la autoridad, lo que puede conllevar sanciones." },
+  { "tema": "Responsabilidad", "pregunta": "Si un grupo de amigos está planeando dañar propiedad pública por diversión, ¿qué deberías hacer?", "opciones": ["A. Unirte porque todos lo hacen.", "B. Advertirles sobre las consecuencias y alejarte de la situación.", "C. Grabarlo para tener pruebas pero no decir nada.", "D. Esperar a que terminen y luego contarle a alguien."], "correcta": "B. Advertirles sobre las consecuencias y alejarte de la situación." },
+  { "tema": "Responsabilidad", "pregunta": "¿Qué sucede si un menor es sorprendido portando un arma cortopunzante sin justificación?", "opciones": ["A. No tiene ninguna consecuencia legal.", "B. Se le confisca el arma y puede recibir una medida correctiva.", "C. Solo se le notifica a sus padres sin consecuencias.", "D. Es detenido y enviado a un centro de reclusión juvenil."], "correcta": "B. Se le confisca el arma y puede recibir una medida correctiva." },
+  { "tema": "Responsabilidad", "pregunta": "¿Qué sanción puede recibir un menor que participe en una riña en el espacio público?", "opciones": ["A. Debe pedir disculpas y seguir con su vida.", "B. Podría recibir amonestación y ser obligado a asistir a programas pedagógicos.", "C. Será expulsado del colegio automáticamente.", "D. Se le sanciona con trabajos forzados."], "correcta": "B. Podría recibir amonestación y ser obligado a asistir a programas pedagógicos." },
+  { "tema": "Maltrato", "pregunta": "Las "barras bravas" o pandillas que involucran a adolescentes en actos violentos:", "opciones": ["a) Están permitidas como expresión cultural si no usan armas de fuego", "b) Solo son ilegales si los integrantes son mayores de 16 años", "c) Pueden configurar diversos delitos como lesiones personales, daño en bien ajeno o concierto para delinquir", "d) Son consideradas simplemente como contravenciones menores"], "correcta": "c) Pueden configurar diversos delitos como lesiones personales, daño en bien ajeno o concierto para delinquir" },
+  { "tema": "Responsabilidad", "pregunta": "¿Por qué es importante conocer las normas del Código de Infancia y Adolescencia?", "opciones": ["A. Porque solo los adultos deben conocerlas.", "B. Para entender nuestros derechos y deberes como menores de edad.", "C. Porque si las rompes, siempre habrá una segunda oportunidad sin consecuencias.", "D. No es importante, solo aplican a delincuentes juveniles."], "correcta": "B. Para entender nuestros derechos y deberes como menores de edad." },
+  { "tema": "Penal", "pregunta": "Si un adolescente de 15 años comete un homicidio doloso, según la Ley 1098 de 2006 (modificada por la Ley 1453 de 2011):", "opciones": ["a) No puede ser juzgado por ser menor de edad y solo recibirá terapia psicológica", "b) Puede ser condenado como adulto a más de 20 años de prisión en una cárcel regular", "c) Puede ser privado de libertad en un centro de atención especializado por un periodo entre 2 y 8 años", "d) Solo recibe una amonestación y servicio comunitario por ser menor de 16 años"], "correcta": "c) Puede ser privado de libertad en un centro de atención especializado por un periodo entre 2 y 8 años" },
+  { "tema": "Penal", "pregunta": "¿Qué ocurre si un adolescente de 17 años es condenado por un delito grave y cumple 18 años durante su sanción?", "opciones": ["a) Es inmediatamente trasladado a una cárcel para adultos", "b) Queda en libertad inmediata por principio de favorabilidad", "c) Continúa en el centro de atención especializado para adolescentes hasta completar su sanción", "d) Su caso debe revisarse nuevamente bajo las leyes para adultos"], "correcta": "c) Continúa en el centro de atención especializado para adolescentes hasta completar su sanción" },
+  { "tema": "Penal", "pregunta": "El "principio de oportunidad" en el sistema de responsabilidad penal para adolescentes significa que:", "opciones": ["a) El adolescente tiene la oportunidad de escapar si el delito no es grave", "b) La Fiscalía puede renunciar a la persecución penal bajo ciertas condiciones, buscando la justicia restaurativa", "c) El juez tiene la oportunidad de imponer la máxima sanción en casos ejemplarizantes", "d) El adolescente tiene la oportunidad de elegir entre cárcel o servicio militar"], "correcta": "b) La Fiscalía puede renunciar a la persecución penal bajo ciertas condiciones, buscando la justicia restaurativa" },
+  { "tema": "Responsabilidad", "pregunta": "Si un menor es encontrado dañando propiedad pública, ¿qué medida correctiva se puede aplicar?", "opciones": ["A. Debe reparar el daño o participar en actividades pedagógicas.", "B. No se le puede hacer nada porque es menor de edad.", "C. Se le envía a la cárcel por un año.", "D. Debe pagar la reparación del daño en efectivo de inmediato."], "correcta": "A. Debe reparar el daño o participar en actividades pedagógicas." },
+  { "tema": "Penal", "pregunta": "La privación de libertad de un adolescente en el sistema de responsabilidad penal:", "opciones": ["a) Busca principalmente el castigo ejemplarizante para prevenir delitos futuros", "b) Tiene finalidad pedagógica, protectora, educativa y restaurativa, no simplemente punitiva", "c) Es igual a la prisión para adultos pero con menor tiempo de condena", "d) Siempre incluye trabajo forzado como método de rehabilitación"], "correcta": "b) Tiene finalidad pedagógica, protectora, educativa y restaurativa, no simplemente punitiva" },
+  { "tema": "Penal", "pregunta": "Si un adolescente de 14 años es presionado por un adulto para cometer un hurto:", "opciones": ["a) Ambos reciben exactamente la misma pena por el mismo delito", "b) El adolescente no tiene ninguna responsabilidad por ser manipulado", "c) El adolescente tiene responsabilidad pero bajo el sistema para adolescentes, mientras el adulto recibe sanciones adicionales por usar a un menor", "d) Solo el adulto es procesado y el adolescente queda automáticamente libre"], "correcta": "c) El adolescente tiene responsabilidad pero bajo el sistema para adolescentes, mientras el adulto recibe sanciones adicionales por usar a un menor" },
+  { "tema": "Penal", "pregunta": "¿Cuál es la pena máxima que puede recibir un adolescente por un delito grave?", "opciones": ["A. 3 años", "B. 5 años", "C. 8 años", "D. 10 años"], "correcta": "C. 8 años" },
+  { "tema": "Grooming", "pregunta": "Un adulto contacta a una adolescente por redes sociales, finge tener su misma edad y le pide que no le cuente a nadie. Esto puede ser:", "opciones": ["A. Una amistad digital normal.", "B. Parte de un juego en línea.", "C. Grooming, una forma de acoso sexual que pone en riesgo a la menor.", "D. Una broma común entre jóvenes."], "correcta": "C. Grooming, una forma de acoso sexual que pone en riesgo a la menor." },
+  { "tema": "Cibernético", "pregunta": "Si un desconocido en línea te pide fotos o información personal, ¿qué es lo más seguro que puedes hacer?", "opciones": ["A. Dárselas si parece amable y confiable.", "B. Bloquearlo y reportarlo a la plataforma o a un adulto responsable.", "C. Quedar en persona para conocerlo mejor.", "D. Seguir conversando hasta que parezca seguro compartir datos."], "correcta": "B. Bloquearlo y reportarlo a la plataforma o a un adulto responsable." },
+  { "tema": "Grooming", "pregunta": "¿Qué debes hacer si un desconocido por internet insiste en hablar contigo de temas sexuales?", "opciones": ["A. Seguir la conversación con curiosidad.", "B. No hacer nada y esperar que se aburra.", "C. Detener la conversación, bloquearlo y reportarlo a un adulto o autoridad.", "D. Contarle a tus amigos para que también lo contacten."], "correcta": "C. Detener la conversación, bloquearlo y reportarlo a un adulto o autoridad." },
+  { "tema": "Responsabilidad", "pregunta": "¿Qué sucede si un menor incumple la restricción de movilidad nocturna impuesta por un alcalde?", "opciones": ["A. Puede ser trasladado a una comisaría de familia para su protección.", "B. No hay ninguna consecuencia, solo se le llama la atención.", "C. Recibe una multa económica inmediatamente.", "D. Debe realizar trabajo comunitario como sanción."], "correcta": "A. Puede ser trasladado a una comisaría de familia para su protección." },
+  { "tema": "Responsabilidad", "pregunta": "Si alguien intenta manipularte para hacer algo ilegal, ¿cuál es la mejor forma de actuar?", "opciones": ["A. Hacerlo para no quedar mal con esa persona.", "B. Decir que no y buscar ayuda de un adulto o autoridad competente.", "C. Solo hacerlo si nadie está mirando.", "D. Seguir sus instrucciones sin cuestionarlo."], "correcta": "B. Decir que no y buscar ayuda de un adulto o autoridad competente." },
+  { "tema": "Responsabilidad", "pregunta": "Si un menor participa en carreras ilegales de motocicletas, ¿qué sanción puede recibir?", "opciones": ["A. No hay sanción porque es menor de edad.", "B. Su vehículo puede ser inmovilizado y se le impone una multa.", "C. Solo se le da una advertencia verbal.", "D. Se le prohíbe manejar cualquier tipo de vehículo de por vida."], "correcta": "B. Su vehículo puede ser inmovilizado y se le impone una multa." },
+  { "tema": "Responsabilidad", "pregunta": "Si un menor hace una llamada falsa a emergencias, ¿qué infracción está cometiendo?", "opciones": ["A. No es ninguna infracción, es solo una broma.", "B. Obstrucción del servicio de emergencia, lo que puede acarrear sanciones.", "C. Se le prohíbe usar el teléfono por un mes.", "D. Debe pagar una multa de inmediato."], "correcta": "B. Obstrucción del servicio de emergencia, lo que puede acarrear sanciones." },
+  { "tema": "Responsabilidad", "pregunta": "¿Desde qué edad un adolescente puede responder penalmente en Colombia?", "opciones": ["A. 12 años", "B. 14 años", "C. 16 años", "D. 18 años"], "correcta": "B. 14 años" },
+  { "tema": "Penal", "pregunta": "¿Los adolescentes tienen derecho a defensa en un proceso penal?", "opciones": ["A. No", "B. Sí", "C. Solo si pagan", "D. Depende del caso"], "correcta": "B. Sí" },
+  { "tema": "Convivencia", "pregunta": "¿Qué autoridad puede imponer comparendos a los jóvenes?", "opciones": ["A. Policía", "B. Rector", "C. Alcalde", "D. Fiscal"], "correcta": "A. Policía" },
+];
 
-    let angle = 0;
-    let spinning = false;
+    const wheel = document.getElementById("wheel");
+    const ctx = wheel.getContext("2d");
+    const numSegments = temas.length;
+    const arcSize = (2 * Math.PI) / numSegments;
 
     function drawWheel() {
-      const num = preguntas.length;
-      const anglePerSlice = 2 * Math.PI / num;
-
-      for (let i = 0; i < num; i++) {
+      temas.forEach((segment, i) => {
+        const angle = i * arcSize;
         ctx.beginPath();
+        ctx.fillStyle = segment.color;
         ctx.moveTo(200, 200);
-        ctx.fillStyle = `hsl(${i * 360 / num}, 70%, 60%)`;
-        ctx.arc(200, 200, 200, i * anglePerSlice, (i + 1) * anglePerSlice);
-        ctx.lineTo(200, 200);
+        ctx.arc(200, 200, 200, angle, angle + arcSize);
         ctx.fill();
-      }
-    }
-
-    function spinWheel() {
-      if (spinning) return;
-      spinning = true;
-      let rotation = Math.random() * 360 + 720;
-      angle += rotation;
-      canvas.style.transition = "transform 3s ease-out";
-      canvas.style.transform = `rotate(${angle}deg)`;
-
-      setTimeout(() => {
-        const normalized = angle % 360;
-        const slice = Math.floor(preguntas.length - (normalized / 360) * preguntas.length) % preguntas.length;
-        mostrarPregunta(preguntas[slice]);
-        spinning = false;
-      }, 3100);
-    }
-
-    function mostrarPregunta(pregunta) {
-      result.innerText = `Pregunta: ${pregunta.pregunta}`;
-      optionsDiv.innerHTML = "";
-      pregunta.opciones.forEach(op => {
-        const btn = document.createElement("button");
-        btn.className = "option-btn";
-        btn.textContent = op;
-        btn.onclick = () => {
-          if (op === pregunta.correcta) {
-            winSound.play();
-            alert("¡Correcto! Bien hecho.");
-          } else {
-            errorSound.play();
-            alert("Respuesta incorrecta. Intenta otra vez.");
-          }
-        };
-        optionsDiv.appendChild(btn);
+        ctx.save();
+        ctx.translate(200, 200);
+        ctx.rotate(angle + arcSize / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "white";
+        ctx.font = "bold 14px sans-serif";
+        ctx.fillText(segment.tema, 190, 10);
+        ctx.restore();
       });
     }
 
     drawWheel();
-    spinBtn.onclick = spinWheel;
+
+    let spinning = false;
+    document.getElementById("spin").addEventListener("click", () => {
+      if (spinning) return;
+      spinning = true;
+      const rotation = 360 * 5 + Math.floor(Math.random() * 360);
+      wheel.style.transition = "transform 4s ease-out";
+      wheel.style.transform = `rotate(${rotation}deg)`;
+      const index = Math.floor(((rotation % 360) / 360) * numSegments);
+      const temaSeleccionado = temas[(numSegments - index) % numSegments].tema;
+      setTimeout(() => {
+        mostrarPregunta(temaSeleccionado);
+        wheel.style.transition = "";
+        spinning = false;
+      }, 4200);
+    });
+
+    function mostrarPregunta(tema) {
+      const zona = preguntas.filter(p => p.tema === tema);
+      const seleccionada = zona[Math.floor(Math.random() * zona.length)];
+      const contenedor = document.getElementById("result");
+      contenedor.innerHTML = `<h3>${seleccionada.pregunta}</h3>`;
+      seleccionada.opciones.forEach(op => {
+        const btn = document.createElement("button");
+        btn.className = "option-btn";
+        btn.innerText = op;
+        btn.onclick = () => {
+          if (op === seleccionada.correcta) {
+            document.getElementById("correct").play();
+            alert("¡Correcto!");
+          } else {
+            document.getElementById("wrong").play();
+            alert("Incorrecto. La respuesta correcta es: " + seleccionada.correcta);
+          }
+        };
+        contenedor.appendChild(btn);
+      });
+    }
   </script>
 </body>
 </html>
